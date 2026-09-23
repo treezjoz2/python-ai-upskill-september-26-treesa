@@ -1,0 +1,1 @@
+# sample file for the journal app
