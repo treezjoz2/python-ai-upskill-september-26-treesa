@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secret Journal</title>
+<style>
+  :root {
+    --ink: #17191c;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --accent: #1f2937;
+    --danger: #b42318;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2.5rem 1rem 4rem;
+    line-height: 1.5;
+  }
+  header { margin-bottom: 1.5rem; }
+  h1 { font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+  header p { color: var(--muted); margin: 0.2rem 0 0; font-size: 0.95rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.1rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h2 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+    font-weight: 600;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 0.7rem;
+    font: inherit;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    resize: vertical;
+    background: #fff;
+  }
+  textarea:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .compose-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .count { color: var(--muted); font-size: 0.82rem; margin-left: auto; }
+
+  label.field { font-size: 0.85rem; color: var(--muted); }
+
+  select {
+    font: inherit;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fff;
+  }
+
+  button {
+    font: inherit;
+    padding: 0.45rem 0.95rem;
+    border-radius: 7px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+  button.danger { background: #fff; color: var(--danger); border-color: #f3c6c2; }
+  button:disabled { opacity: 0.55; cursor: default; }
+
+  #status { margin-top: 0.75rem; padding: 0.55rem 0.75rem; border-radius: 7px; font-size: 0.9rem; display: none; }
+  #status.ok { display: block; background: #e8f5ec; color: #14532d; }
+  #status.error { display: block; background: #fdecea; color: #7f1d1d; }
+
+  .list-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .list-header .spacer { margin-left: auto; }
+  #summary { color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
+
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { display: flex; gap: 0.7rem; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+  li:last-child { border-bottom: none; }
+  li .body { min-width: 0; }
+  li .text { word-wrap: break-word; }
+  li .meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.1rem; }
+  li.empty { color: var(--muted); justify-content: center; padding: 1.25rem 0; }
+
+  .face {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+    height: fit-content;
+    background: #f1f2f4;
+    color: #374151;
+  }
+  .face.positive { background: #e8f5ec; color: #14532d; }
+  .face.negative { background: #fdecea; color: #7f1d1d; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TJ's Secret Journal</h1>
+  <p>Day 2 — the journal, now over HTTP.</p>
+</header>
+
+<section class="card">
+  <h2>New entry</h2>
+  <textarea id="entry" rows="4" maxlength="500" placeholder="What happened today?"></textarea>
+
+  <div class="compose-actions">
+    <label class="field" for="sentiment">Mood</label>
+    <select id="sentiment">
+      <option value="positive">positive</option>
+      <option value="neutral" selected>neutral</option>
+      <option value="negative">negative</option>
+    </select>
+    <button id="save-button" onclick="submitEntry()">Save entry</button>
+    <span class="count" id="char-count">0 / 500</span>
+  </div>
+
+  <div id="status"></div>
+</section>
+
+<section class="card">
+  <h2>Saved entries</h2>
+
+  <div class="list-header">
+    <label class="field" for="filter">Show</label>
+    <select id="filter" onchange="loadEntries()">
+      <option value="">all</option>
+      <option value="positive">positive</option>
+      <option value="neutral">neutral</option>
+      <option value="negative">negative</option>
+    </select>
+    <span class="spacer"></span>
+    <button class="ghost" onclick="loadEntries()">Refresh</button>
+    <button class="danger" onclick="clearEntries()">Clear all</button>
+  </div>
+
+  <p id="summary">Loading…</p>
+  <ul id="entries"></ul>
+</section>
+
+<script>
+const API = "http://localhost:8000";
+
+const entryBox = document.getElementById("entry");
+const sentimentBox = document.getElementById("sentiment");
+const filterBox = document.getElementById("filter");
+const saveButton = document.getElementById("save-button");
+const statusBox = document.getElementById("status");
+const summaryBox = document.getElementById("summary");
+const listBox = document.getElementById("entries");
+
+function showStatus(message, ok) {
+  statusBox.textContent = message;
+  statusBox.className = ok ? "ok" : "error";
+}
+
+function readError(result) {
+  // FastAPI reports validation failures as a list under "detail".
+  if (Array.isArray(result.detail)) {
+    return result.detail.map(item => item.msg).join(", ");
+  }
+  return result.detail || "Unknown error";
+}
+
+entryBox.addEventListener("input", () => {
+  document.getElementById("char-count").textContent = `${entryBox.value.length} / 500`;
+});
+
+async function submitEntry() {
+  const entry = entryBox.value;
+  const sentiment = sentimentBox.value;
+
+  saveButton.disabled = true;
+  saveButton.textContent = "Saving…";
+
+  try {
+    const response = await fetch(`${API}/journal`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entry, sentiment })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      showStatus(`Not saved — ${readError(result)}`, false);
+      return;
+    }
+
+    showStatus(result.message, true);
+    entryBox.value = "";
+    entryBox.dispatchEvent(new Event("input"));
+
+    // Show the entry that was just written, whatever the filter was set to.
+    filterBox.value = "";
+    await loadEntries();
+  } catch (error) {
+    showStatus(`Could not reach the API: ${error.message}`, false);
+  } finally {
+    saveButton.disabled = false;
+    saveButton.textContent = "Save entry";
+  }
+}
+
+async function loadEntries() {
+  const filter = filterBox.value;
+  const url = filter ? `${API}/journal?sentiment_filter=${filter}` : `${API}/journal`;
+  summaryBox.textContent = "Loading…";
+
+  try {
+    // no-store, or the browser can answer a repeated GET from its own cache.
+    const response = await fetch(url, { cache: "no-store" });
+    const entries = await response.json();
+
+    if (!response.ok) {
+      summaryBox.textContent = `Could not load entries — ${readError(entries)}`;
+      return;
+    }
+
+    renderEntries(entries, filter);
+  } catch (error) {
+    listBox.innerHTML = "";
+    summaryBox.textContent = `Could not reach the API: ${error.message}`;
+  }
+}
+
+function renderEntries(entries, filter) {
+  listBox.innerHTML = "";
+
+  const label = filter ? `${filter} ` : "";
+  const plural = entries.length === 1 ? "entry" : "entries";
+  summaryBox.textContent = `${entries.length} ${label}${plural}`;
+
+  if (entries.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = filter
+      ? `Nothing marked ${filter} yet.`
+      : "No entries yet — write your first one above.";
+    listBox.appendChild(empty);
+    return;
+  }
+
+  for (const entry of entries) {
+    listBox.appendChild(buildRow(entry));
+  }
+}
+
+function buildRow(entry) {
+  const row = document.createElement("li");
+
+  const face = document.createElement("span");
+  face.className = `face ${entry.sentiment}`;
+  face.textContent = entry.mood;
+
+  const body = document.createElement("div");
+  body.className = "body";
+
+  const text = document.createElement("div");
+  text.className = "text";
+  text.textContent = entry.message;
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = `#${entry.id} · ${entry.sentiment} · ${entry.timestamp}`;
+
+  body.append(text, meta);
+  row.append(face, body);
+  return row;
+}
+
+async function clearEntries() {
+  const confirmed = confirm(
+    "Delete every journal entry? This rewrites data/journal.csv and cannot be undone."
+  );
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`${API}/journal`, { method: "DELETE" });
+    const result = await response.json();
+
+    if (!response.ok) {
+      showStatus(`Could not clear — ${readError(result)}`, false);
+      return;
+    }
+
+    showStatus(result.message, true);
+    filterBox.value = "";
+    await loadEntries();
+  } catch (error) {
+    showStatus(`Could not reach the API: ${error.message}`, false);
+  }
+}
+
+loadEntries();
+</script>
+
+</body>
+</html>
