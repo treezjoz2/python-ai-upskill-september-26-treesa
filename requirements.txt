@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+
+# formatting and linting
+black>=24.0
+isort>=5.13
+flake8>=7.0

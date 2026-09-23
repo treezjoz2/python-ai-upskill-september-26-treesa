@@ -1,25 +1,19 @@
+"""Secret Journal - the Day 1 terminal journal.
+
+Storage now lives in src/api/utils/file_handler.py, so the CLI and the API
+write the same CSV.
+
+Run it with:  python -m src.cli.journal_cli
 """
-Secret Journal : A terminal journal that stores entries in a CSV file.
 
-Day 1 of the Python upskilling series: variables, input, f-strings, dicts, loops, functions, type hints and file handling.
+from src.api.utils.file_handler import (
+    build_entry,
+    load_entries,
+    next_entry_id,
+    save_entry_to_csv,
+)
+from src.core.config import CSV_FILE, DEFAULT_NAME, MOOD_FACES
 
-Run it with:  python journal.py
-"""
-
-import csv
-import os
-from datetime import datetime
-
-CSV_FILE = "journal.csv"
-CSV_COLUMNS = ["id", "message", "mood", "timestamp"]
-
-MOOD_FACES = {
-    "happy": ":)",
-    "sad": ":(",
-    "neutral": ":|",
-}
-
-DEFAULT_NAME = "TJ"
 
 def get_user_name() -> str:
     """Ask who is journaling, falling back to the owner of this journal."""
@@ -51,44 +45,10 @@ def create_entry(entry_id: int) -> dict:
     """Create a new journal entry with user input and validation."""
     message = ask_for_message()
     mood = ask_for_mood()
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    return {
-        "id": entry_id,
-        "message": message,
-        "mood": mood,
-        "timestamp": timestamp,
-    }
+    return build_entry(entry_id, message, mood)
 
 
-def save_entry_to_csv(entry: dict) -> None:
-    """Append one entry to the CSV, writing the header row if the file is new."""
-    file_is_new = not os.path.exists(CSV_FILE)
-
-    with open(CSV_FILE, "a", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=CSV_COLUMNS)
-        if file_is_new:
-            writer.writeheader()
-        writer.writerow(entry)
-
-
-def load_entries() -> list:
-    """Read every saved entry back from the CSV, or [] if there is no file yet."""
-    try:
-        with open(CSV_FILE, "r", newline="", encoding="utf-8") as file:
-            return list(csv.DictReader(file))
-    except FileNotFoundError:
-        return []
-
-
-def next_entry_id(entries: list) -> int:
-    """Pick the next id, so numbering keeps counting across restarts."""
-    if not entries:
-        return 1
-    return max(int(entry["id"]) for entry in entries) + 1
-
-
-def display_entries(entries: list) -> None:
+def display_entries(entries: list[dict]) -> None:
     """Print the saved entries, one per line, oldest first."""
     if not entries:
         print("\nNothing here yet — option 1 starts your first entry.\n")
@@ -111,10 +71,9 @@ def show_menu() -> None:
 
 def handle_new_entry() -> None:
     """Build one entry and append it to the CSV."""
-    entries = load_entries()
-    entry = create_entry(next_entry_id(entries))
+    entry = create_entry(next_entry_id(load_entries()))
     save_entry_to_csv(entry)
-    print(f"\nSaved entry #{entry['id']} to {CSV_FILE}.\n")
+    print(f"\nSaved entry #{entry['id']} to {CSV_FILE.name}.\n")
 
 
 def main() -> None:
@@ -132,7 +91,7 @@ def main() -> None:
         elif choice == "2":
             display_entries(load_entries())
         elif choice == "3":
-            print(f"\nThat's a wrap, {name}. Your entries are safe in {CSV_FILE}.")
+            print(f"\nThat's a wrap, {name}. Your entries are safe in {CSV_FILE.name}.")
             return
         else:
             print("\nPlease choose 1, 2 or 3.\n")
